@@ -35,7 +35,7 @@ function accepto_config()
 function accepto_link($params)
 {
     $apiKey = $params['apiKey'];
-    $apiBaseUrl = ACCEPTO_WHMCS_API_BASE_URL;
+    $endpoint = ACCEPTO_WHMCS_API_BASE_URL . '/v1/orders';
 
     // Invoice Parameters
     $invoiceId = $params['invoiceid'];
@@ -50,18 +50,31 @@ function accepto_link($params)
     );
 
     $ch = curl_init();
-    curl_setopt($ch, CURLOPT_URL, $apiBaseUrl . '/api/v1/orders');
+    curl_setopt($ch, CURLOPT_URL, $endpoint);
     curl_setopt($ch, CURLOPT_POST, 1);
     curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($postData));
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_HTTPHEADER, array(
         'Authorization: Bearer ' . $apiKey,
-        'Content-Type: application/json'
+        'Content-Type: application/json',
+        'Accept: application/json'
     ));
 
     $response = curl_exec($ch);
+    $curlError = curl_error($ch);
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
+
+    if ($response === false || $curlError) {
+        if (function_exists('logTransaction')) {
+            logTransaction('Accepto', array(
+                'endpoint' => $endpoint,
+                'curl_error' => $curlError,
+            ), 'Connection Error');
+        }
+
+        return '<div class="alert alert-danger">Error initializing Accepto payment. Please check your API configuration.</div>';
+    }
 
     if ($httpCode == 200 || $httpCode == 201) {
         $responseData = json_decode($response, true);
@@ -71,6 +84,14 @@ function accepto_link($params)
                         <input type="submit" value="' . $params['langpaynow'] . '" class="btn btn-primary" />
                     </form>';
         }
+    }
+
+    if (function_exists('logTransaction')) {
+        logTransaction('Accepto', array(
+            'endpoint' => $endpoint,
+            'http_code' => $httpCode,
+            'response' => $response,
+        ), 'API Error');
     }
 
     return '<div class="alert alert-danger">Error initializing Accepto payment. Please check your API configuration.</div>';
