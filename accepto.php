@@ -79,10 +79,10 @@ function accepto_link($params)
     if ($httpCode == 200 || $httpCode == 201) {
         $responseData = json_decode($response, true);
         if (isset($responseData['checkout_url'])) {
-            $checkoutUrl = $responseData['checkout_url'];
-            return '<form action="' . $checkoutUrl . '" method="GET">
-                        <input type="submit" value="' . $params['langpaynow'] . '" class="btn btn-primary" />
-                    </form>';
+            $checkoutUrl = htmlspecialchars($responseData['checkout_url'], ENT_QUOTES, 'UTF-8');
+            $payNowLabel = htmlspecialchars($params['langpaynow'], ENT_QUOTES, 'UTF-8');
+
+            return '<a href="' . $checkoutUrl . '" class="btn btn-primary">' . $payNowLabel . '</a>';
         }
     }
 
